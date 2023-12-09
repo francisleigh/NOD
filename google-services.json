@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "742031503738",
+    "project_id": "nod-7d365",
+    "storage_bucket": "nod-7d365.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742031503738:android:4b77a6982fac85ba6926c3",
+        "android_client_info": {
+          "package_name": "com.tankalabs.nod"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAAhwZhCUoKpjmmk6tGmxPx3iJYBp5kU4s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
