@@ -1,12 +1,10 @@
 // Import the functions you need from the SDKs you need
-import { getAnalytics } from "firebase/analytics";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
 import {Platform} from "react-native";
 
-import firebase from '@react-native-firebase/app'
-import firebaseAuth from '@react-native-firebase/auth'
+import firebase, {ReactNativeFirebase} from '@react-native-firebase/app'
+import firebaseAuthentication from '@react-native-firebase/auth'
 import firebaseFirestore from '@react-native-firebase/firestore';
+import FirebaseAppOptions = ReactNativeFirebase.FirebaseAppOptions;
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -18,10 +16,10 @@ const appId = Platform.select({
 	ios: "1:742031503738:ios:e55f86ec67c563366926c3",
 	android: "1:742031503738:android:4b77a6982fac85ba6926c3",
 	web: "1:742031503738:web:7e8c7a58e54cd6526926c3"
-})
+});
 
-const firebaseConfig = {
-	appId,
+const firebaseConfig: FirebaseAppOptions = {
+	appId: appId!,
 	apiKey: "AIzaSyAbKdsnuZ6V8aw_N2X8J9isZVNZZz_qfBc",
 	authDomain: "nod-7d365.firebaseapp.com",
 	projectId: "nod-7d365",
@@ -31,6 +29,7 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-export const firebaseApp = firebase.initializeApp(firebaseConfig);
+export const firebaseApp = firebase.initializeApp( firebaseConfig);
 
-export const firebaseDb = firebaseFirestore;
+export const firebaseDb = firebaseFirestore(firebaseApp);
+export const firebaseAuth = firebaseAuthentication(firebaseApp);
