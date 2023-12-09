@@ -1,10 +1,11 @@
-import firebase from "firebase/compat";
+import {FirebaseAuthTypes} from "@react-native-firebase/auth";
+
 type ToFirestore<T> = {
   [K in keyof T]: T[K] extends Date ? string : T[K];
 };
 type ToClient<T> = { id: string } & T;
 
-type User = firebase.User | null
+type User = FirebaseAuthTypes.User | null
 
 type Scenario = {
   name: string;

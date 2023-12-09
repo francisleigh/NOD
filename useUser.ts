@@ -1,10 +1,13 @@
-import { atom, useAtom, Atom } from 'jotai'
+import { atom, useAtom } from 'jotai'
+import {UserClient, UserFirestore} from "./types";
+import {useEffect} from "react";
+import {firebaseAuth} from "./firebase.config";
 
 const userFirestoreAtom = atom<UserFirestore>({})
 const userAtom = atom<UserClient>((get) => {
 	const u = get(userFirestoreAtom);
 	return {
-		...u,
+		...(u ?? {}),
 		firstName: u?.displayName?.split(' ')[0] ?? '',
 		lastName: u?.displayName?.split(' ')[1] ?? '',
 	}
@@ -13,11 +16,6 @@ const isLoggedInAtom = atom<boolean>((get) => {
 	return !!get(userFirestoreAtom)?.uid
 });
 
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import {UserClient, UserFirestore} from "./types";
-import {useEffect} from "react";
-import {firebaseAuth} from "./firebase.config";
-
 export const useUser = () => {
 	const [, setUser] = useAtom(userFirestoreAtom);
 	const [isLoggedIn] = useAtom(isLoggedInAtom);
@@ -25,15 +23,7 @@ export const useUser = () => {
 
 	useEffect(() => {
 		firebaseAuth.onAuthStateChanged((user) => {
-			if (user) {
-				// User is signed in, see docs for a list of available properties
-				// https://firebase.google.com/docs/reference/js/auth.user
-				setUser(user);
-				// ...
-			} else {
-				// User is signed out
-				// ...
-			}
+			setUser(user);
 		});
 	}, [])
 
