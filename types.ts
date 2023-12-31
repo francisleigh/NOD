@@ -5,7 +5,7 @@ type ToFirestore<T> = {
 };
 type ToClient<T> = { id: string } & T;
 
-type User = FirebaseAuthTypes.User | null
+type User = FirebaseAuthTypes.User
 
 type Scenario = {
   name: string;
@@ -19,15 +19,11 @@ type ScenarioUser = {
 } & User;
 
 type ScenarioNod = {
-  userId: User['id'];
+  userUid: User['uid'];
   createdAt: Date;
   ttl: Date;
 };
 
-export type UserClient = ToClient<User & {
-  firstName: string | undefined;
-  lastName: string | undefined;
-}>
-export type UserFirestore = ToFirestore<User>
+export type UserFirestore = ToFirestore<User>|null
 export type ScenarioClient = ToClient<Scenario>;
 export type ScenarioFirestore = ToFirestore<Scenario>;

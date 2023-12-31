@@ -1,16 +1,11 @@
-import { atom, useAtom } from 'jotai'
-import {authUser} from "../state/auth-user.state";
-
-const isLoggedInAtom = atom<boolean>((get) => {
-	return !!get(authUser)?.uid
-});
+import { useAtom } from 'jotai'
+import {authUser_firestore} from "../state/auth-user.state";
 
 export const useUser = () => {
-	const [isLoggedIn] = useAtom(isLoggedInAtom);
-	const [user] = useAtom(authUser);
+	const [user] = useAtom(authUser_firestore);
 
 	return {
-		isLoggedIn,
+		isLoggedIn: user?.uid,
 		user
 	}
 }

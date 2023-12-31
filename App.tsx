@@ -1,15 +1,34 @@
 import { StatusBar } from "expo-status-bar";
-import {ActivityIndicator, Button, Modal, SafeAreaView, Text, TextInput, View, StyleSheet} from "react-native";
+import {
+    ActivityIndicator,
+    Modal,
+    StyleSheet,
+    SafeAreaView,
+    Text,
+    View,
+    TouchableOpacity, TextInputProps, ButtonProps
+} from "react-native";
 
 import {useUser} from "./src/hooks/useUser";
-import {firebaseOptionsConfigs, getFirebase, initialiseFirebase} from "./firebase.config";
-import {useCallback, useEffect, useState} from "react";
-import  {useAtom} from "jotai";
+import {getFirebase, initialiseFirebase} from "./firebase.config";
+import {ReactNode, useCallback, useEffect, useState} from "react";
+import {useAtom} from "jotai";
 import {authUser_firestore} from "./src/state/auth-user.state";
-import {FirebaseAuthTypes, firebase} from "@react-native-firebase/auth";
-import PhoneAuthListener = FirebaseAuthTypes.PhoneAuthListener;
+import {FirebaseAuthTypes} from "@react-native-firebase/auth";
 function Entry() {
+    const {firebaseAuth} = getFirebase()
     const {isLoggedIn, user} = useUser();
+    const [, setAuthUser_firestore] = useAtom(authUser_firestore)
+
+    const handleLogout = useCallback(async () => {
+        try {
+           await firebaseAuth.signOut()
+            setAuthUser_firestore(null);
+        } catch (e) {
+            console.log(e);
+        }
+    }, [firebaseAuth]);
+
     return (
         <>
             <SafeAreaView
@@ -27,8 +46,10 @@ function Entry() {
                     {isLoggedIn ? <Text>Logged in</Text> : <Text>Not Logged in</Text>}
                 </View>
 
+                {isLoggedIn && <Text>{JSON.stringify(user, null, 2)}</Text>}
+
                 <View style={{ padding: 10 }}>
-                    {isLoggedIn && <Button title={'Log out'} />}
+                    {isLoggedIn && <Button title={'Log out'} onPress={handleLogout}/>}
                 </View>
 
 
@@ -38,16 +59,16 @@ function Entry() {
         </>
     );
 }
-const AuthStateController = ({ children }) => {
+const AuthStateController = ({ children }: { children: ReactNode }) => {
     const [, setAuthUser_firestore] = useAtom(authUser_firestore)
     const {firebaseAuth} = getFirebase();
 
-    const onAuthStateChangedHandler = useCallback((user: FirebaseAuthTypes.User | null) => {
-        setAuthUser_firestore(user);
-    }, [setAuthUser_firestore]);
-
     useEffect(() => {
-        firebaseAuth?.onAuthStateChanged(onAuthStateChangedHandler);
+        firebaseAuth?.onAuthStateChanged((user) => {
+            if (user?.uid) {
+                setAuthUser_firestore(user);
+            }
+        });
     }, []);
 
     return <>
@@ -55,117 +76,76 @@ const AuthStateController = ({ children }) => {
     </>
 }
 
-const AuthGuard = ({ children }) => {
-    const {firebaseAuth, firebaseApp} = getFirebase();
+const AuthGuard = ({ children }: { children: ReactNode }) => {
     const {isLoggedIn} = useUser();
+    const {firebaseAuth} = getFirebase();
 
-    const recaptchaVerifier = React.useRef(false);
+    const [confirm, setConfirm] = useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
+    const [verificationCode, setVerificationCode] = useState<string>('');
+    const [phoneNumber, setPhoneNumber] = useState<string>('+447715301968');
 
-    const [showModal, setShowModal] = useState<boolean>(false);
-    const [phoneNumber, setPhoneNumber] = React.useState<string>('');
-    const [verificationId, setVerificationId] = React.useState<PhoneAuthListener>();
-    const [verificationCode, setVerificationCode] = React.useState<string>('');
+    async function signInWithPhoneNumber() {
+        const confirmation = await firebaseAuth?.signInWithPhoneNumber(phoneNumber);
+        setConfirm(confirmation as any);
+    }
 
-    const [message, showMessage] = React.useState<{text: string, color?: string }>();
-
-    useEffect(() => {
-        setShowModal(!isLoggedIn);
-    }, [setShowModal, isLoggedIn]);
-
-    const handleCreateAccount = async () => {
-        if (firebaseAuth) {
+    async function confirmCode() {
+        if (!!confirm) {
             try {
-                const verificationId = await firebaseAuth.verifyPhoneNumber(
-                    phoneNumber,
-                    recaptchaVerifier.current
-                );
-                setVerificationId(verificationId);
-                showMessage({
-                    text: 'Verification code has been sent to your phone.',
-                });
-            } catch (err) {
-                showMessage({ text: `Error: ${err.message}`, color: 'red' });
+                const r = await confirm.confirm(verificationCode);
+            } catch (error) {
+                console.log('Invalid code.');
             }
         }
     }
 
-    const handleConfirmVerification = async () => {
-        if (firebaseAuth && verificationId) {
-            try {
-                const credential = firebase.auth.PhoneAuthProvider.credential(verificationId, verificationCode)
-                await firebaseAuth.signInWithCredential(credential);
-                showMessage({ text: 'Phone authentication successful 👍' });
-            } catch (err) {
-                showMessage({ text: `Error: ${err.message}`, color: 'red' });
-            }
-        }
-    }
+    return (
+        <>
+            {children}
 
-    return <>
-        {children}
-        <Modal visible={showModal} presentationStyle={'formSheet'} style={{padding: 10}}>
-            <Button title={'Log in'} />
-            <Button onPress={handleCreateAccount} title={'Create account'} />
+            <View style={{
+                ...StyleSheet.absoluteFillObject,
+                backgroundColor: 'black',
+                justifyContent: 'center',
+                alignItems: 'center'
+            }}>
 
-            <Text style={{ marginTop: 20 }}>Enter phone number</Text>
-            <TextInput
-                style={{ marginVertical: 10, fontSize: 17 }}
-                placeholder="+1 999 999 9999"
-                autoFocus
-                autoCompleteType="tel"
-                keyboardType="phone-pad"
-                textContentType="telephoneNumber"
-                onChangeText={(phoneNumber: string) => setPhoneNumber(phoneNumber)}
-            />
-            <Button
-                title="Send Verification Code"
-                disabled={!phoneNumber}
-                onPress={handleCreateAccount}
-            />
-            <Text style={{ marginTop: 20 }}>Enter Verification code</Text>
-            <TextInput
-                style={{ marginVertical: 10, fontSize: 17 }}
-                editable={!!verificationId}
-                placeholder="123456"
-                onChangeText={setVerificationCode}
-            />
-            <Button
-                title="Confirm Verification Code"
-                disabled={!verificationId}
-                // onPress={async () => {
-                //     const phoneProvider = new firebase.auth.PhoneAuthProvider();
-                //     const verificationId = await phoneProvider.verifyPhoneNumber('+0123456789', recaptchaVerifierRef);
-                //     try {
-                //         const credential = PhoneAuthProvider.credential(verificationId, verificationCode);
-                //         await signInWithCredential(auth, credential);
-                //         showMessage({ text: 'Phone authentication successful 👍' });
-                //     } catch (err) {
-                //         showMessage({ text: `Error: ${err.message}`, color: 'red' });
-                //     }
-                // }}
-            />
-            {message ? (
-                <TouchableOpacity
-                    style={[
-                        StyleSheet.absoluteFill,
-                        { backgroundColor: 0xffffffee, justifyContent: 'center' },
-                    ]}
-                    onPress={() => showMessage(undefined)}>
-                    <Text
-                        style={{
-                            color: message.color || 'blue',
-                            fontSize: 17,
-                            textAlign: 'center',
-                            margin: 20,
-                        }}>
-                        {message.text}
-                    </Text>
-                </TouchableOpacity>
-            ) : undefined}
+                <View style={{
+                    backgroundColor: 'white',
+                    borderWidth: 2,
+                    borderColor: 'grey',
+                    borderRadius: 20,
+                    padding: 20,
+                    width: '90%'
+                }}>
+                    {confirm ? <>
+                        <Label>Enter Verification code</Label>
+                        <TextInput
+                            placeholder="123456"
+                            onChangeText={setVerificationCode}
+                        />
+                        <Button
 
-            <FirebaseRecaptchaBanner />
-        </Modal>
-    </>
+                            title="Confirm Verification Code"
+                            onPress={confirmCode}
+                        />
+                    </> : <>
+                        <Label>Enter phone number</Label>
+                        <TextInput
+                            placeholder="+1 999 999 9999"
+                            value={phoneNumber}
+                            autoComplete="tel"
+                            keyboardType="phone-pad"
+                            textContentType="telephoneNumber"
+                            onChangeText={(phoneNumber: string) => setPhoneNumber(phoneNumber)}
+                        />
+                        <Button
+                            title={'Send verification code'} onPress={signInWithPhoneNumber}/>
+                    </>}
+                </View>
+            </View>
+        </>
+    )
 }
 
 
@@ -187,8 +167,54 @@ export default function App() {
     </View>
 
     return <AuthStateController>
-        <AuthGuard>
-            <Entry />
-        </AuthGuard>
-    </AuthStateController>
+                <AuthGuard>
+                    <Entry />
+                </AuthGuard>
+            </AuthStateController>
+
+}
+
+
+const Button = ({ onPress, title }: ButtonProps) => {
+    return (
+        <TouchableOpacity style={{
+            backgroundColor: '#3498db',
+            borderRadius: 10,
+            paddingVertical: 12,
+            paddingHorizontal: 20,
+            alignItems: 'center',
+            marginTop: 10,
+        }} onPress={onPress}>
+            <Text style={{
+                fontSize: 16,
+                color: '#ffffff',
+                fontWeight: 'bold',
+            }}>{title}</Text>
+        </TouchableOpacity>
+    );
+};
+
+const Label = ({ children }: { children: ReactNode }) => {
+    return <Text style={{
+        fontSize: 16,
+        marginBottom: 5,
+        color: '#333333',
+        fontWeight: 'bold',
+    }}>{children}</Text>
+}
+
+const TextInput = ({style, ...props}: TextInputProps) => {
+    return <TextInput
+        style={[{
+            height: 50,
+            borderWidth: 1,
+            borderColor: '#CCCCCC',
+            borderRadius: 8,
+            paddingHorizontal: 15,
+            marginTop: 10,
+            fontSize: 16,
+            color: '#333333',
+        }, style]}
+        {...props}
+    />
 }
